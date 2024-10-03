@@ -23,7 +23,7 @@ jobs:
 
       # Step 3: Build the project using Gradle or Maven
       - name: Build with Gradle
-        run: ./gradlew build
+        run: chmod +x gradlew ./gradlew build
 
         # If you're using Maven, use the following step instead:
         # - name: Build with Maven
