@@ -1,0 +1,74 @@
+name: Deploy To EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Java environment
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Step 3: Build the project using Gradle or Maven
+      - name: Build with Gradle
+        run: ./gradlew build
+
+        # If you're using Maven, use the following step instead:
+        # - name: Build with Maven
+        #   run: mvn clean package
+
+      # Step 4: Upload the JAR file as an artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: spring-boot-app
+          path: build/libs/*.jar  # For Gradle, change this path if using Maven
+
+      # Step 5: Deploy to AWS EC2 using SSH and SCP
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          port: 22
+          script: |
+            # Create the deploy directory if it doesn't exist
+            mkdir -p ${{ secrets.EC2_DEPLOY_PATH }}
+            # Stop the current Spring Boot application if it's running
+            pkill -f 'java.*app.jar' || true
+            # Remove the old JAR file
+            rm -f ${{ secrets.EC2_DEPLOY_PATH }}/app.jar
+
+      - name: Copy JAR to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          source: build/libs/*.jar  # Path to your JAR file
+          target: ${{ secrets.EC2_DEPLOY_PATH }}/app.jar
+
+      - name: Restart Spring Boot app on EC2
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          port: 22
+          script: |
+            # Start the Spring Boot application
+            nohup java -jar ${{ secrets.EC2_DEPLOY_PATH }}/app.jar > /dev/null 2>&1 &
+
