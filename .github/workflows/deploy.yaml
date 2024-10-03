@@ -48,6 +48,7 @@ jobs:
           key: ${{ secrets.AWS_SSH_KEY }}
           port: 22
           script: |
+            set -x  # Enable verbose logging
             # Create the deploy directory if it doesn't exist
             mkdir -p ${{ secrets.EC2_DEPLOY_PATH }}
             # Stop the current Spring Boot application if it's running
