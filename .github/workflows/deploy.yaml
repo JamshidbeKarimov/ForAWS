@@ -21,9 +21,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Step 3: Build the project using Gradle or Maven
+      # Step 3: Give gradle permission Build the project using Gradle or Maven
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
       - name: Build with Gradle
-        run: chmod +x gradlew ./gradlew build
+        run: ./gradlew build
 
         # If you're using Maven, use the following step instead:
         # - name: Build with Maven
