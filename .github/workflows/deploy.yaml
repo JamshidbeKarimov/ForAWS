@@ -54,6 +54,11 @@ jobs:
             pkill -f 'java.*app.jar' || true
             # Remove the old JAR file
             rm -f ${{ secrets.EC2_DEPLOY_PATH }}/app.jar
+          sync: false
+          use_insecure_cipher: false
+          timeout: 60s  # Increase timeout
+          command_timeout: 30m  # Increase command timeout
+          debug: true  # Enable debugging
 
       - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.7
