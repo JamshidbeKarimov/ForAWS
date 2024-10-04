@@ -1,89 +1,71 @@
-name: Deploy To EC2
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
-      - master
+      - main  # Trigger on pushes to the main branch
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
+      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up Java environment
+      # Step 2: Set up JDK
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
           distribution: 'temurin'
+          java-version: '17'
 
-      # Step 3: Give gradle permission Build the project using Gradle or Maven
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
+      # Step 3: Build with Gradle
       - name: Build with Gradle
-        run: ./gradlew build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build
 
-        # If you're using Maven, use the following step instead:
-        # - name: Build with Maven
-        #   run: mvn clean package
+      # Step 4: Set up Docker
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
 
-      # Step 4: Upload the JAR file as an artifact
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
+      # Step 5: Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
         with:
-          name: ForAWS-0.0.1
-          path: build/libs/*.jar  # For Gradle, change this path if using Maven
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # Step 6: Build and push Docker image
+      - name: Build and push Docker image
+        run: |
+          docker build -t your-dockerhub-username/your-app-name:latest .
+          docker push your-dockerhub-username/your-app-name:latest
 
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      # Step 1: Set up SSH
+      - name: Install SSH client
+        run: sudo apt-get install -y openssh-client
+
+      # Step 2: Add SSH key for EC2
+      - name: Add SSH key
+        uses: shimataro/ssh-key-action@v2
         with:
-          name: ForAWS-0.0.1
-
-      # Step 5: Deploy to AWS EC2 using SSH and SCP
-      - name: Deploy to AWS EC2
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.AWS_EC2_HOST }}
-          username: ${{ secrets.AWS_EC2_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
-          port: 22
-          script: |
-            set -x  # Enable verbose logging
-            if ! java -version &> /dev/null; then
-              sudo yum update -y && sudo yum install java-17-openjdk -y
-            fi
-            mkdir -p ${{ secrets.EC2_DEPLOY_PATH }}
-            pkill -f 'java.*ForAWS-0.0.1.jar' || true
-            rm -f ${{ secrets.EC2_DEPLOY_PATH }}/ForAWS-0.0.1.jar
-          sync: false
-          use_insecure_cipher: false
-          timeout: 60s  # Increase timeout
-          command_timeout: 30m  # Increase command timeout
-          debug: true  # Enable debugging
+          known_hosts: ${{ secrets.EC2_KNOWN_HOSTS }}
 
-      - name: Copy JAR to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.AWS_EC2_HOST }}
-          username: ${{ secrets.AWS_EC2_USER }}
-          key: ${{ secrets.AWS_SSH_KEY }}
-          source: build/libs/*.jar  # Path to your JAR file
-          target: ${{ secrets.EC2_DEPLOY_PATH }}/ForAWS-0.0.1.jar
-
-      - name: Restart Spring Boot app on EC2
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.AWS_EC2_HOST }}
-          username: ${{ secrets.AWS_EC2_USER }}
-          key: ${{ secrets.AWS_SSH_KEY }}
-          port: 22
-          script: |
-            # Start the Spring Boot application
-            nohup java -jar ${{ secrets.EC2_DEPLOY_PATH }}/ForAWS-0.0.1.jar > /dev/null 2>&1 &
-
+      # Step 3: Deploy to EC2
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@your-ec2-ip-address "
+          docker pull your-dockerhub-username/your-app-name:latest &&
+          docker stop your-container-name || true &&
+          docker rm your-container-name || true &&
+          docker run -d --name your-container-name -p 80:8080 your-dockerhub-username/your-app-name:latest
+          "
