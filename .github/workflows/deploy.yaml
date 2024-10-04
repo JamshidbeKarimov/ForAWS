@@ -55,6 +55,10 @@ jobs:
           port: 22
           script: |
             set -x  # Enable verbose logging
+            # Install Java if not already installed
+            if ! java -version &> /dev/null; then
+              sudo yum update -y && sudo yum install java-17-openjdk -y  # Adjust for Ubuntu: sudo apt install openjdk-17-jdk
+            fi
             # Create the deploy directory if it doesn't exist
             mkdir -p ${{ secrets.EC2_DEPLOY_PATH }}
             # Stop the current Spring Boot application if it's running
