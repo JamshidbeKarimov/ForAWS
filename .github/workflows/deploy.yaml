@@ -43,7 +43,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v3
         with:
-          name: application-jar
+          name: spring-boot-app
 
       # Step 5: Deploy to AWS EC2 using SSH and SCP
       - name: Deploy to AWS EC2
