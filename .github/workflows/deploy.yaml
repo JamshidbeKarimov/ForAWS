@@ -39,6 +39,12 @@ jobs:
           name: spring-boot-app
           path: build/libs/*.jar  # For Gradle, change this path if using Maven
 
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: application-jar
+
       # Step 5: Deploy to AWS EC2 using SSH and SCP
       - name: Deploy to AWS EC2
         uses: appleboy/ssh-action@v0.1.7
@@ -54,7 +60,7 @@ jobs:
             # Stop the current Spring Boot application if it's running
             pkill -f 'java.*app.jar' || true
             # Remove the old JAR file
-            rm -f ${{ secrets.EC2_DEPLOY_PATH }}/app.jar
+            rm -f ${{ secrets.EC2_DEPLOY_PATH }}/spring-boot-app.jar
           sync: false
           use_insecure_cipher: false
           timeout: 60s  # Increase timeout
@@ -79,5 +85,5 @@ jobs:
           port: 22
           script: |
             # Start the Spring Boot application
-            nohup java -jar ${{ secrets.EC2_DEPLOY_PATH }}/app.jar > /dev/null 2>&1 &
+            nohup java -jar ${{ secrets.EC2_DEPLOY_PATH }}/spring-boot-app.jar > /dev/null 2>&1 &
 
