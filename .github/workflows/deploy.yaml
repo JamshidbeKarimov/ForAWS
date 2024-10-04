@@ -67,5 +67,5 @@ jobs:
           docker pull ${{ secrets.DOCKER_USERNAME }}/for-aws:latest &&
           docker stop my-app || true &&
           docker rm my-app || true &&
-          docker run -d --name my-app -p 80:8080 ${{ secrets.DOCKER_USERNAME }}/for-aws:latest
+          docker run -d --name my-app -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/for-aws:latest
           "
